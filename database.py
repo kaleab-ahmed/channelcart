@@ -4,7 +4,7 @@ import random
 DB_NAME = "channel_cart.db"
 
 def init_db():
-    """Initializes database tables for orders and products."""
+    """Initializes database tables for orders and products, and safely migrates old schemas."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
@@ -16,12 +16,19 @@ def init_db():
             username TEXT,
             product_id TEXT,
             quantity TEXT,
+            phone TEXT,
             latitude REAL,
             longitude REAL,
             status TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # Safely add 'phone' column if an older database table is missing it
+    try:
+        cursor.execute('ALTER TABLE orders ADD COLUMN phone TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     # Products Table for Management
     cursor.execute('''
@@ -80,14 +87,14 @@ def delete_product(product_id):
     conn.commit()
     conn.close()
 
-def save_order(order_id, buyer_id, username, product_id, quantity, lat, lng):
+def save_order(order_id, buyer_id, username, product_id, quantity, phone, lat, lng):
     """Saves a new order into the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO orders (order_id, buyer_id, username, product_id, quantity, latitude, longitude, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (order_id, buyer_id, username, product_id, quantity, lat, lng, "Pending"))
+        INSERT INTO orders (order_id, buyer_id, username, product_id, quantity, phone, latitude, longitude, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (order_id, buyer_id, username, product_id, quantity, phone, lat, lng, "Pending"))
     conn.commit()
     conn.close()
 
