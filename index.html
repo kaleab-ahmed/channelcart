@@ -112,14 +112,7 @@
             tg.expand();
         }
 
-        // Sample Inventory Data (Synchronized with Bot Database)
-        const products = [
-            { id: "ITEM-8743", title: "Educational Building Blocks Set", price: 750, currency: "ETB", stock: 12, img: "https://placehold.co/400x400/2563eb/ffffff?text=Building+Blocks" },
-            { id: "ITEM-4421", title: "Kids Learning Tablet", price: 1850, currency: "ETB", stock: 5, img: "https://placehold.co/400x400/0d9488/ffffff?text=Learning+Tablet" },
-            { id: "ITEM-9012", title: "Montessori Wooden Puzzle", price: 450, currency: "ETB", stock: 0, img: "https://placehold.co/400x400/d97706/ffffff?text=Wooden+Puzzle" },
-            { id: "ITEM-3310", title: "Interactive Story Book", price: 350, currency: "ETB", stock: 20, img: "https://placehold.co/400x400/7c3aed/ffffff?text=Story+Book" }
-        ];
-
+        let products = [];
         let cart = [];
 
         // DOM Elements
@@ -136,6 +129,18 @@
         const openCartBarBtn = document.getElementById('openCartBarBtn');
         const floatingCartCount = document.getElementById('floatingCartCount');
         const floatingCartTotal = document.getElementById('floatingCartTotal');
+
+        // Fetch Products Dynamically from products.json
+        async function loadProducts() {
+            try {
+                const response = await fetch('products.json?' + new Date().getTime()); // Prevent caching
+                products = await response.json();
+                renderProducts(products);
+            } catch (err) {
+                console.error("Failed to load products:", err);
+                productGrid.innerHTML = `<div class="col-span-2 text-center py-8 text-tg-hint">Failed to load storefront inventory</div>`;
+            }
+        }
 
         // Render Products
         function renderProducts(items) {
@@ -199,7 +204,7 @@
 
         function updateCartUI() {
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const totalPrice = cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
 
             // Update Badges & Floating bar
             if (totalItems > 0) {
@@ -228,7 +233,7 @@
                         <img src="${item.img}" class="w-12 h-12 rounded-lg object-cover">
                         <div class="flex-1 min-w-0">
                             <h4 class="text-xs font-semibold truncate">${item.title}</h4>
-                            <p class="text-xs font-bold text-blue-600 mt-0.5">${item.price * item.quantity} ETB</p>
+                            <p class="text-xs font-bold text-blue-600 mt-0.5">${parseFloat(item.price) * item.quantity} ETB</p>
                         </div>
                         <div class="flex items-center space-x-2 bg-tg-theme p-1 rounded-lg border border-tg">
                             <button onclick="updateQuantity('${item.id}', -1)" class="w-6 h-6 rounded flex items-center justify-center text-tg-hint hover:text-red-500">
@@ -265,7 +270,7 @@
             const payload = {
                 action: "checkout",
                 items: cart.map(i => ({ id: i.id, title: i.title, qty: i.quantity, price: i.price })),
-                total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+                total: cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0)
             };
 
             if (tg) {
@@ -277,7 +282,7 @@
         });
 
         // Initial Load
-        renderProducts(products);
+        loadProducts();
         lucide.createIcons();
     </script>
 </body>
