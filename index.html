@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ChannelCart Mini App Storefront</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: var(--tg-theme-bg-color, #f8fafc);
+            color: var(--tg-theme-text-color, #0f172a);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bg-tg-theme { background-color: var(--tg-theme-bg-color, #ffffff); }
+        .bg-tg-secondary { background-color: var(--tg-theme-secondary-bg-color, #f1f5f9); }
+        .text-tg-hint { color: var(--tg-theme-hint-color, #64748b); }
+        .border-tg { border-color: var(--tg-theme-secondary-bg-color, #e2e8f0); }
+        .btn-tg-primary {
+            background-color: var(--tg-theme-button-color, #2563eb);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24 select-none">
+
+    <!-- Header / Branding -->
+    <header class="sticky top-0 z-30 bg-tg-theme border-b border-tg px-4 py-3 shadow-sm flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-md">
+                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold leading-tight">Bright Kids Shop</h1>
+                <p class="text-xs text-tg-hint">Powered by ChannelCart</p>
+            </div>
+        </div>
+        <button id="cartBtn" class="relative p-2 rounded-xl bg-tg-secondary text-tg-hint hover:text-blue-600 transition">
+            <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+            <span id="cartBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow">0</span>
+        </button>
+    </header>
+
+    <!-- Search & Filter Bar -->
+    <div class="p-4 space-y-3">
+        <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tg-hint"></i>
+            <input type="text" id="searchInput" placeholder="Search toys, books, clothes..." 
+                class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-tg-secondary border-none text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+        </div>
+    </div>
+
+    <!-- Product Grid -->
+    <main class="px-4">
+        <h2 class="text-sm font-semibold text-tg-hint uppercase tracking-wider mb-3">Featured Products</h2>
+        <div id="productGrid" class="grid grid-cols-2 gap-3.5">
+            <!-- Dynamically Populated Products -->
+        </div>
+    </main>
+
+    <!-- Cart Drawer -->
+    <div id="cartDrawer" class="fixed inset-0 z-50 transform translate-y-full transition-transform duration-300 ease-in-out bg-tg-theme flex flex-col">
+        <!-- Drawer Header -->
+        <div class="p-4 border-b border-tg flex items-center justify-between bg-tg-theme">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="shopping-cart" class="w-5 h-5 text-blue-600"></i>
+                <h2 class="font-bold text-lg">Your Cart</h2>
+            </div>
+            <button id="closeCartBtn" class="p-2 rounded-xl bg-tg-secondary text-tg-hint">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Cart Items List -->
+        <div id="cartItemList" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <!-- Cart Items rendered here -->
+        </div>
+
+        <!-- Cart Footer -->
+        <div class="p-4 border-t border-tg bg-tg-theme space-y-3">
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-tg-hint">Subtotal</span>
+                <span id="cartSubtotal" class="font-bold text-base">0 ETB</span>
+            </div>
+            <button id="checkoutBtn" class="w-full py-3.5 rounded-xl font-semibold btn-tg-primary shadow-lg active:scale-95 transition flex items-center justify-center space-x-2">
+                <span>Proceed to Checkout</span>
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Sticky Floating Bottom Bar for Quick Cart access -->
+    <div id="floatingCartBar" class="fixed bottom-4 left-4 right-4 z-20 hidden">
+        <button id="openCartBarBtn" class="w-full btn-tg-primary py-3 px-4 rounded-2xl shadow-xl flex items-center justify-between font-semibold active:scale-98 transition">
+            <div class="flex items-center space-x-2">
+                <span id="floatingCartCount" class="bg-white/20 px-2 py-0.5 rounded-lg text-sm">0 items</span>
+                <span>View Cart</span>
+            </div>
+            <span id="floatingCartTotal">0 ETB</span>
+        </button>
+    </div>
+
+    <script>
+        const tg = window.Telegram ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        // Sample Inventory Data (Synchronized with Bot Database)
+        const products = [
+            { id: "ITEM-8743", title: "Educational Building Blocks Set", price: 750, currency: "ETB", stock: 12, img: "https://placehold.co/400x400/2563eb/ffffff?text=Building+Blocks" },
+            { id: "ITEM-4421", title: "Kids Learning Tablet", price: 1850, currency: "ETB", stock: 5, img: "https://placehold.co/400x400/0d9488/ffffff?text=Learning+Tablet" },
+            { id: "ITEM-9012", title: "Montessori Wooden Puzzle", price: 450, currency: "ETB", stock: 0, img: "https://placehold.co/400x400/d97706/ffffff?text=Wooden+Puzzle" },
+            { id: "ITEM-3310", title: "Interactive Story Book", price: 350, currency: "ETB", stock: 20, img: "https://placehold.co/400x400/7c3aed/ffffff?text=Story+Book" }
+        ];
+
+        let cart = [];
+
+        // DOM Elements
+        const productGrid = document.getElementById('productGrid');
+        const searchInput = document.getElementById('searchInput');
+        const cartBadge = document.getElementById('cartBadge');
+        const cartDrawer = document.getElementById('cartDrawer');
+        const cartBtn = document.getElementById('cartBtn');
+        const closeCartBtn = document.getElementById('closeCartBtn');
+        const cartItemList = document.getElementById('cartItemList');
+        const cartSubtotal = document.getElementById('cartSubtotal');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        const floatingCartBar = document.getElementById('floatingCartBar');
+        const openCartBarBtn = document.getElementById('openCartBarBtn');
+        const floatingCartCount = document.getElementById('floatingCartCount');
+        const floatingCartTotal = document.getElementById('floatingCartTotal');
+
+        // Render Products
+        function renderProducts(items) {
+            productGrid.innerHTML = '';
+            if(items.length === 0) {
+                productGrid.innerHTML = `<div class="col-span-2 text-center py-8 text-tg-hint">No products found</div>`;
+                return;
+            }
+
+            items.forEach(prod => {
+                const isSoldOut = prod.stock <= 0;
+                const card = document.createElement('div');
+                card.className = "bg-tg-theme rounded-2xl p-3 border border-tg flex flex-col justify-between shadow-sm relative overflow-hidden";
+                card.innerHTML = `
+                    <div>
+                        <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-tg-secondary mb-2.5">
+                            <img src="${prod.img}" alt="${prod.title}" class="w-full h-full object-cover">
+                            ${isSoldOut ? `<span class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">SOLD OUT</span>` : ''}
+                        </div>
+                        <h3 class="font-semibold text-xs leading-snug line-clamp-2 mb-1">${prod.title}</h3>
+                        <p class="text-xs text-tg-hint mb-2">ID: <code class="text-[10px] bg-tg-secondary px-1 py-0.5 rounded">${prod.id}</code></p>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-tg">
+                        <span class="font-bold text-sm">${prod.price} ${prod.currency}</span>
+                        <button onclick="addToCart('${prod.id}')" ${isSoldOut ? 'disabled' : ''} 
+                            class="p-2 rounded-xl ${isSoldOut ? 'bg-tg-secondary text-tg-hint cursor-not-allowed' : 'btn-tg-primary active:scale-90 transition shadow'}">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                productGrid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        // Cart Actions
+        window.addToCart = function(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || product.stock <= 0) return;
+
+            const existing = cart.find(item => item.id === productId);
+            if (existing) {
+                if(existing.quantity < product.stock) existing.quantity++;
+            } else {
+                cart.push({ ...product, quantity: 1 });
+            }
+            updateCartUI();
+            if(tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        };
+
+        window.updateQuantity = function(productId, delta) {
+            const item = cart.find(i => i.id === productId);
+            if (!item) return;
+
+            item.quantity += delta;
+            if (item.quantity <= 0) {
+                cart = cart.filter(i => i.id !== productId);
+            }
+            updateCartUI();
+        };
+
+        function updateCartUI() {
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            // Update Badges & Floating bar
+            if (totalItems > 0) {
+                cartBadge.classList.remove('hidden');
+                cartBadge.textContent = totalItems;
+                floatingCartBar.classList.remove('hidden');
+                floatingCartCount.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'items'}`;
+                floatingCartTotal.textContent = `${totalPrice} ETB`;
+            } else {
+                cartBadge.classList.add('hidden');
+                floatingCartBar.classList.add('hidden');
+                cartDrawer.classList.add('translate-y-full');
+            }
+
+            cartSubtotal.textContent = `${totalPrice} ETB`;
+
+            // Render Cart Drawer List
+            cartItemList.innerHTML = '';
+            if (cart.length === 0) {
+                cartItemList.innerHTML = `<div class="text-center py-12 text-tg-hint">Your shopping cart is empty</div>`;
+            } else {
+                cart.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between p-3 bg-tg-secondary rounded-xl space-x-3";
+                    row.innerHTML = `
+                        <img src="${item.img}" class="w-12 h-12 rounded-lg object-cover">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-xs font-semibold truncate">${item.title}</h4>
+                            <p class="text-xs font-bold text-blue-600 mt-0.5">${item.price * item.quantity} ETB</p>
+                        </div>
+                        <div class="flex items-center space-x-2 bg-tg-theme p-1 rounded-lg border border-tg">
+                            <button onclick="updateQuantity('${item.id}', -1)" class="w-6 h-6 rounded flex items-center justify-center text-tg-hint hover:text-red-500">
+                                <i data-lucide="minus" class="w-3 h-3"></i>
+                            </button>
+                            <span class="text-xs font-bold w-4 text-center">${item.quantity}</span>
+                            <button onclick="updateQuantity('${item.id}', 1)" class="w-6 h-6 rounded flex items-center justify-center text-tg-hint hover:text-blue-500">
+                                <i data-lucide="plus" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+                    `;
+                    cartItemList.appendChild(row);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        // Toggle Drawer
+        cartBtn.addEventListener('click', () => cartDrawer.classList.remove('translate-y-full'));
+        openCartBarBtn.addEventListener('click', () => cartDrawer.classList.remove('translate-y-full'));
+        closeCartBtn.addEventListener('click', () => cartDrawer.classList.add('translate-y-full'));
+
+        // Search Filter
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = products.filter(p => p.title.toLowerCase().includes(term) || p.id.toLowerCase().includes(term));
+            renderProducts(filtered);
+        });
+
+        // Checkout Button -> Sends data back to Telegram Bot
+        checkoutBtn.addEventListener('click', () => {
+            if (cart.length === 0) return;
+
+            const payload = {
+                action: "checkout",
+                items: cart.map(i => ({ id: i.id, title: i.title, qty: i.quantity, price: i.price })),
+                total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+            };
+
+            if (tg) {
+                tg.sendData(JSON.stringify(payload));
+                tg.close();
+            } else {
+                alert("Order payload generated:\n" + JSON.stringify(payload, null, 2));
+            }
+        });
+
+        // Initial Load
+        renderProducts(products);
+        lucide.createIcons();
+    </script>
+</body>
+</html>
