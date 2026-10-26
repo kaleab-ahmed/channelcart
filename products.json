@@ -1,1 +1,10 @@
-[]
+[
+    {
+        "id": "ITEM-2291",
+        "title": "Laptop",
+        "price": "30000",
+        "currency": "ETB",
+        "stock": 12,
+        "img": "https://placehold.co/400x400/2563eb/ffffff?text=Laptop"
+    }
+]
