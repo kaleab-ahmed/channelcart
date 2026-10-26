@@ -1,1 +1,10 @@
-[]
+[
+    {
+        "id": "ITEM-1000",
+        "title": "Uffo",
+        "price": "607",
+        "currency": "ETB",
+        "stock": 1,
+        "img": "https://placehold.co/400x400/2563eb/ffffff?text=Uffo"
+    }
+]
