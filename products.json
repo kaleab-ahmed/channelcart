@@ -1,13 +1,5 @@
 [
     {
-        "id": "ITEM-1001",
-        "title": "Car",
-        "price": 750.0,
-        "currency": "ETB",
-        "stock": 0,
-        "img": "https://placehold.co/400x400/2563eb/ffffff?text=Car"
-    },
-    {
         "id": "ITEM-1000",
         "title": "Uffo",
         "price": 607.0,
